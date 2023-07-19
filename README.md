@@ -36,3 +36,14 @@ import simRead
 
 simulation = simRead.Sims('path/to/simulations')
 ```
+
+## Dependencies list
+
+This package has been developed employing the following packages:
+
+- numpy==1.25.1
+- scipy==1.11.1
+- matplotlib==3.7.2
+- h5py==3.9.0
+- p_tqdm==1.4.0
+
