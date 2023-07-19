@@ -13,6 +13,8 @@ import scipy.optimize as op
 
 import matplotlib.pyplot as plt
 
+from . import MakeVideo
+
 class _Sims():
 
     def __init__(self, _path):
@@ -248,6 +250,17 @@ class _Sim():
     def find_peak(self, rho, height = [1e-2]):
         idx_MAX = sg.find_peaks(rho, height=height, distance=2)[0][::-1]
         return idx_MAX[0]
+
+    def make_video(self, batches=0, video_path=None):
+
+        if video_path == None:
+            video_path = os.path.join(self.path, 'video')
+        Path(video_path).mkdir(parents=True, exist_ok=True)
+
+        if batches == 0:
+            batches = np.ceil(self.niter / 5000)
+
+        MakeVideo.GenerateVideo(self, video_path, batches)
 
     def plot(self, Y, X=None, iteration=None, time=None, color=None, linestyle=None, xrange=None, yrange=None, xlabel=None, ylabel=None, title=None, printTime=True, showHor=False, return_handles=False, savefig=False, name=None, savepath='.'):
         
