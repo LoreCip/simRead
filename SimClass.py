@@ -258,7 +258,7 @@ class _Sim():
         Path(video_path).mkdir(parents=True, exist_ok=True)
 
         if batches == 0:
-            batches = np.ceil(self.niter / 5000)
+            batches = int(np.ceil(self.niter / 5000))
 
         MakeVideo.GenerateVideo(self, video_path, batches)
 

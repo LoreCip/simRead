@@ -33,7 +33,7 @@ def determine_y_axis_range(data):
 
 def plotting(inputs):
 
-        i, X, B, eps, rho, t, m = inputs 
+        i, X, B, eps, rho, t, m, path = inputs 
 
         fig = plt.figure(figsize=(13, 10))
         fig.suptitle(f'Time: {np.round(t, 4)}', fontsize=14)
@@ -58,10 +58,10 @@ def plotting(inputs):
 
         plt.tight_layout()
 
-        plt.savefig(f'./.frames/frame{i:07d}.png')
+        plt.savefig(os.path.join(path, 'frame{i:07d}.png'))
         plt.close()
 
-def ProduceInputs(sim, last_line, pline):
+def ProduceInputs(sim, last_line, pline, path):
 
     it = np.array(range(last_line, last_line + pline))
     it = it[it <= sim.niter]
@@ -73,7 +73,7 @@ def ProduceInputs(sim, last_line, pline):
     ts = sim.get(it, 't')
     m = sim.mass
 
-    return [(last_line + i, X, Bs[i], ebs[i], rhos[i], ts[i], m) for i in range(last_line, last_line + pline)]
+    return [(last_line + i, X, Bs[i], ebs[i], rhos[i], ts[i], m, str(path)) for i in range(last_line, last_line + pline)]
 
 def GenerateVideo(sim, ppath, n_partitions = 1):
 
@@ -82,18 +82,15 @@ def GenerateVideo(sim, ppath, n_partitions = 1):
         n_partitions = 1
 
     Path(f"{os.path.join(ppath,'.frames')}").mkdir(parents=True, exist_ok=True)
-
-    print('Creating frames.')
     
     last_line = 0
     p_line = int(np.ceil( sim.niter / n_partitions))
     
     for j in range(n_partitions):
-        inputs = ProduceInputs(sim, last_line, p_line)
+        inputs = ProduceInputs(sim, last_line, p_line, os.path.join(ppath,'.framesl'))
         p_map(plotting, inputs)
         last_line += p_line
 
-    print('Creating out_video.mp4')
     os.system(f"ffmpeg -framerate 30 -loglevel quiet -pattern_type glob -i {os.path.join(ppath,'.frames/*.png')} -c:v libx264 -pix_fmt yuv420p {os.path.join(ppath,'video/out_video.mp4')}")
     os.system("rm -rf ./.frames")
 
