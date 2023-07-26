@@ -58,7 +58,7 @@ def plotting(inputs):
 
         plt.tight_layout()
 
-        plt.savefig(os.path.join(path, 'frame{i:07d}.png'))
+        plt.savefig(os.path.join(path, f'frame{i:07d}.png'))
         plt.close()
 
 def ProduceInputs(sim, last_line, pline, path):
