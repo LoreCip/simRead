@@ -64,7 +64,8 @@ def plotting(inputs):
 def ProduceInputs(sim, last_line, pline, path):
 
     it = np.array(range(last_line, last_line + pline))
-    it = it[it <= sim.niter]
+    it = it[it < sim.niter]
+    if len(it) == 0: return None
 
     X = sim.xgrid
     Bs = sim.get(it, 'B')
@@ -73,7 +74,7 @@ def ProduceInputs(sim, last_line, pline, path):
     ts = sim.get(it, 't')
     m = sim.mass
 
-    return [(last_line + i, X, Bs[i], ebs[i], rhos[i], ts[i], m, str(path)) for i in range(last_line, last_line + pline)]
+    return [(last_line + i, X, Bs[i], ebs[i], rhos[i], ts[i], m, str(path)) for i in range(0, len(it))]
 
 def GenerateVideo(sim, ppath, n_partitions = 1):
 
@@ -85,9 +86,10 @@ def GenerateVideo(sim, ppath, n_partitions = 1):
     
     last_line = 0
     p_line = int(np.ceil( sim.niter / n_partitions))
-    
     for j in range(n_partitions):
-        inputs = ProduceInputs(sim, last_line, p_line, os.path.join(ppath,'.framesl'))
+        inputs = ProduceInputs(sim, last_line, p_line, os.path.join(ppath,'.frames'))
+        if inputs == None: break
+
         p_map(plotting, inputs)
         last_line += p_line
 
