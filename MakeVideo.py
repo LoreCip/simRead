@@ -93,7 +93,7 @@ def GenerateVideo(sim, ppath, n_partitions = 1):
         p_map(plotting, inputs)
         last_line += p_line
 
-    os.system(f"ffmpeg -framerate 30 -loglevel quiet -pattern_type glob -i {os.path.join(ppath,'.frames/*.png')} -c:v libx264 -pix_fmt yuv420p {os.path.join(ppath,'video/out_video.mp4')}")
-    os.system("rm -rf ./.frames")
+    os.system(f"ffmpeg -framerate 30 -loglevel quiet -pattern_type glob -i '{os.path.join(ppath,'.frames/frame*.png')}' -c:v libx264 -pix_fmt yuv420p '{os.path.join(ppath,'out_video.mp4')}'")
+    os.system(f"rm -rf {os.path.join(ppath,'.frames')}")
 
     
