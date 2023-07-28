@@ -76,7 +76,7 @@ def ProduceInputs(sim, last_line, pline, path):
 
     return [(last_line + i, X, Bs[i], ebs[i], rhos[i], ts[i], m, str(path)) for i in range(0, len(it))]
 
-def GenerateVideo(sim, ppath, n_partitions = 1):
+def GenerateVideo(sim, ppath, n_partitions = 1, fps=30, verbose='quiet'):
 
     n_partitions = int(n_partitions)
     if n_partitions <= 0:
@@ -93,7 +93,7 @@ def GenerateVideo(sim, ppath, n_partitions = 1):
         p_map(plotting, inputs)
         last_line += p_line
 
-    os.system(f"ffmpeg -framerate 30 -loglevel quiet -pattern_type glob -i '{os.path.join(ppath,'.frames/frame*.png')}' -c:v libx264 -pix_fmt yuv420p '{os.path.join(ppath,'out_video.mp4')}'")
+    os.system(f"ffmpeg -framerate {fps} -loglevel {verbose} -pattern_type glob -i '{os.path.join(ppath,'.frames/frame*.png')}' -c:v libx264 -pix_fmt yuv420p '{os.path.join(ppath,'out_video.mp4')}'")
     os.system(f"rm -rf {os.path.join(ppath,'.frames')}")
 
     

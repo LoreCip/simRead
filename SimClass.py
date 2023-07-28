@@ -251,7 +251,7 @@ class _Sim():
         idx_MAX = sg.find_peaks(rho, height=height, distance=2)[0][::-1]
         return idx_MAX[0]
 
-    def make_video(self, batches=0, video_path=None):
+    def make_video(self, batches=0, video_path=None, fps=30, verbose='quiet'):
 
         if video_path == None:
             video_path = os.path.join(self.path, 'video')
@@ -260,7 +260,16 @@ class _Sim():
         if batches == 0:
             batches = int(np.ceil(self.niter / 5000))
 
-        MakeVideo.GenerateVideo(self, video_path, batches)
+        if not isinstance(fps, int): fps = int(fps)
+        if fps < 0: fps = 30
+
+        if isinstance(verbose, int) and verbose%8 != 0:
+            raise ValueError("Verbose should be -8 to not print any output, 0 to only show fatal errors or a multiple of 8 up to 56. Each level gives more details.")
+        allowed = ["quiet", "panic", "fatal", "error", "warning", "info", "verbose", "debug", "trace"]
+        if isinstance(verbose, str) and not verbose in allowed:
+            raise ValueError(f"Verbose should be one of {allowed}.")
+
+        MakeVideo.GenerateVideo(self, video_path, batches, fps, verbose)
 
     def plot(self, Y, X=None, iteration=None, time=None, color=None, linestyle=None, xrange=None, yrange=None, xlabel=None, ylabel=None, title=None, printTime=True, showHor=False, return_handles=False, savefig=False, name=None, savepath='.'):
         
