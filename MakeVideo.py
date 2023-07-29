@@ -90,7 +90,13 @@ def GenerateVideo(sim, ppath, n_partitions = 1, fps=30, verbose='quiet'):
         inputs = ProduceInputs(sim, last_line, p_line, os.path.join(ppath,'.frames'))
         if inputs == None: break
 
-        p_map(plotting, inputs)
+        try:
+            p_map(plotting, inputs)
+        except:
+            print('Parallel frames creation failed. Switching to serial.')
+            for i, inp in enumerate(inputs):
+                plotting(inp)
+
         last_line += p_line
 
     os.system(f"ffmpeg -framerate {fps} -loglevel {verbose} -pattern_type glob -i '{os.path.join(ppath,'.frames/frame*.png')}' -c:v libx264 -pix_fmt yuv420p '{os.path.join(ppath,'out_video.mp4')}'")
