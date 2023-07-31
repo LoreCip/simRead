@@ -96,7 +96,7 @@ class _Sim():
 
         self.xgrid = self.__getitem__('Xgrid')
 
-        self.valid_keys = ['t', 'rho', 'e^b', 'B', 'beta', 'dt']
+        self.valid_keys = ['t', 'rho', 'e^b', 'B', 'beta', 'dt', 'theta', 'expansion']
         
 
     def check(self, _path):
@@ -118,6 +118,10 @@ class _Sim():
             return item[()]
 
     def get(self, iteration, item):
+
+        if item not in self.valid_keys:
+            raise IndexError("Invalid key: {} - Accepted keys: {}".format(item, self.valid_keys))
+
         if isinstance(iteration, int):
             indices = [iteration]
         elif isinstance(iteration, list) or isinstance(iteration, np.ndarray):
@@ -134,7 +138,7 @@ class _Sim():
                 raise ValueError("Invalid iteration value: {} - It should be an integer or convertible to one.")
             indices = [iteration]
 
-        result = [self.__getitem__(self.iterations[i])[item] for i in indices]
+        result = [self.__getitem__(self.iterations[i])[item] if not item in ['theta', 'expansion'] else self.compute_expansion(iteration=i) for i in indices]
 
         if len(result) == 1:
             return result[0]
@@ -178,7 +182,10 @@ class _Sim():
                 i = i + 1
                 break
 
-        return self.__getitem__(self.iterations[i])[item]
+        if not item in ['theta', 'expansion']:
+            return self.__getitem__(self.iterations[i])[item]
+        else:
+            return self.compute_expansion(iteration = i )
 
     def readParameters(self):
         comment_char = "/*"
@@ -251,6 +258,29 @@ class _Sim():
         idx_MAX = sg.find_peaks(rho, height=height, distance=2)[0][::-1]
         return idx_MAX[0]
 
+    def compute_expansion(self, iteration=None, time=None):
+        """
+                theta(i) = 1_RK - x(i)**2 * sin(2_RK * B(i) / x(i)**2)**2 / ( 4_RK * (1_RK + E(i)) )
+        """
+
+        if iteration == None and time != None:
+            B = self.get_at_time(time, 'B')
+            E = self.get_at_time(time, 'e^b')
+        elif time == None and iteration != None:    
+           B = self.get(iteration, 'B')
+           E = self.get(iteration, 'e^b')
+        elif iteration == None and time == None:
+            raise ValueError("Both iteration and time are missing. Please provide either iteration or time.")
+        else:
+            warnings.warn("Both iteration and time given. Using iteration.")
+            B = self.get(iteration, 'B')
+            E = self.get(iteration, 'e^b')
+
+        theta = 1 - self.xgrid**2 * np.sin(2 * B / self.xgrid**2)**2 / ( 4 * (1 + E) )
+        im = np.argmin(theta)
+        theta[im] = theta[im + 1] 
+        return theta
+
     def make_video(self, batches=0, video_path=None, fps=30, verbose='quiet'):
 
         if video_path == None:
@@ -272,7 +302,7 @@ class _Sim():
         MakeVideo.GenerateVideo(self, video_path, batches, fps, verbose)
 
     def plot(self, Y, X=None, iteration=None, time=None, color=None, linestyle=None, xrange=None, yrange=None, xlabel=None, ylabel=None, title=None, printTime=True, showHor=False, return_handles=False, savefig=False, name=None, savepath='.'):
-        
+
         if iteration == None and time != None:
             qtt = self.get_at_time(time, Y)
             t = time
