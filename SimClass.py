@@ -98,6 +98,15 @@ class _Sim():
 
         self.valid_keys = ['t', 'rho', 'e^b', 'B', 'beta', 'dt', 'theta', 'expansion']
         
+    def __getitem__(self, key):
+        item = self.outfile[key]
+        if isinstance(item, h5py.Group):
+            return GroupWrapper(item, self.xgrid)
+        else:
+            return item[()]
+
+    def __str__(self):
+        return f'Simulation: {self.name}'
 
     def check(self, _path):
         if not os.path.isdir(_path):
@@ -109,13 +118,27 @@ class _Sim():
         if not os.path.isfile(os.path.join(_path, 'outputs/output.h5')):
             raise FileNotFoundError(os.path.join(_path, 'outputs/output.h5'))
 
+    def readParameters(self):
+        comment_char = "/*"
+        # Load the file using genfromtxt, ignoring comments
+        return np.genfromtxt(
+                                os.path.join(self.path, 'ParameterFile.par'),
+                                comments=comment_char,
+                                dtype = float
+                            )
 
-    def __getitem__(self, key):
-        item = self.outfile[key]
-        if isinstance(item, h5py.Group):
-            return GroupWrapper(item, self.xgrid)
-        else:
-            return item[()]
+    def sort_groups(self):
+        group_names = list(self.outfile.keys())
+        rl = []
+        for i in range(len(group_names)):
+            try:
+                int(group_names[i])  # Try converting the element to an integer
+            except ValueError:
+                rl.append(i)  # Remove the element if it cannot be converted
+        for r in rl[::-1]:
+            group_names.pop(r)
+
+        return sorted(group_names, key=int)
 
     def get(self, iteration, item):
 
@@ -138,7 +161,8 @@ class _Sim():
                 raise ValueError("Invalid iteration value: {} - It should be an integer or convertible to one.")
             indices = [iteration]
 
-        result = [self.__getitem__(self.iterations[i])[item] if not item in ['theta', 'expansion'] else self.compute_expansion(iteration=i) for i in indices]
+        result = [self.__getitem__(self.iterations[i])[item] if not item in ['theta', 'expansion'] \
+                                        else self.compute_expansion(iteration=i) for i in indices]
 
         if len(result) == 1:
             return result[0]
@@ -187,15 +211,6 @@ class _Sim():
         else:
             return self.compute_expansion(iteration = i )
 
-    def readParameters(self):
-        comment_char = "/*"
-        # Load the file using genfromtxt, ignoring comments
-        return np.genfromtxt(
-                                os.path.join(self.path, 'ParameterFile.par'),
-                                comments=comment_char,
-                                dtype = float
-                            )
-    
     def xbounce(self):
 
         def fxb(x, alpha, rs):
@@ -215,23 +230,9 @@ class _Sim():
                         self.xgrid[i], self.xgrid[i+1], 
                         args = (self.r0**2 / self.a0**2, self.hor_loc))
 
-    def sort_groups(self):
-        group_names = list(self.outfile.keys())
-        rl = []
-        for i in range(len(group_names)):
-            try:
-                int(group_names[i])  # Try converting the element to an integer
-            except ValueError:
-                rl.append(i)  # Remove the element if it cannot be converted
-        for r in rl[::-1]:
-            group_names.pop(r)
-
-        return sorted(group_names, key=int)
-
     def find_timeout(self):
-
-        x = self.xgrid
-        lx = len(x)
+        
+        lx = len(self.xgrid)
 
         for iter in range(self.niter-1, 0, -1):
             t = self.get(iter, 't')
@@ -240,16 +241,16 @@ class _Sim():
 
             rho = self.get(iter, 'rho')
 
-            cond1 = x >= self.xb
+            cond1 = self.xgrid >= self.xb
             skipped = len(cond1) - sum(cond1)
-            cond2 = x <= self.hor_loc*2
+            cond2 = self.xgrid <= self.hor_loc*2
             cond = cond1 & cond2
 
             rho = rho[cond]
             locmaxrho = self.find_peak(rho)
             locmaxrho += skipped
 
-            if x[locmaxrho] <= self.hor_loc:
+            if self.xgrid[locmaxrho] <= self.hor_loc:
                 return t
 
         return np.NaN

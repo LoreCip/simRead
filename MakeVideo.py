@@ -5,15 +5,8 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 from p_tqdm import p_map
-
-########
-## TO DO
-########
-# 1) check for existance of frame folder and change name
-# 2) check for existance of out_video and change name
-# 3) input name of out_video
-# 4) option to keep frames
 
 def determine_y_axis_range(data):
     min_value = np.min(data)
@@ -94,7 +87,7 @@ def GenerateVideo(sim, ppath, n_partitions = 1, fps=30, verbose='quiet'):
             p_map(plotting, inputs)
         except:
             print('Parallel frames creation failed. Switching to serial.')
-            for i, inp in enumerate(inputs):
+            for i, inp in tqdm(enumerate(inputs)):
                 plotting(inp)
 
         last_line += p_line
