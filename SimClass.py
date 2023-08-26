@@ -48,11 +48,7 @@ class _Sims():
             key = int(key)
             return self.sims[self.keylist[key]]
         elif isinstance(key, list) or isinstance(key, np.ndarray):
-            try:
-                key = key.tolist()
-            except AttributeError:
-                pass
-            return [self.__getitem__(k) for k in key]
+            return [self.__getitem__(k) for k in list(key)]
         elif isinstance(key, slice):
             start = key.start or 0
             stop = key.stop or len(self.keylist)
@@ -218,7 +214,7 @@ class _Sim():
         
         try:
             return op.brentq(fxb, 
-                        1e-6, 3*(self.hor_loc)*(1/3), 
+                        1e-6, 3*(self.hor_loc)**(1/3), 
                         args = (self.r0**2 / self.a0**2, self.hor_loc))
         except ValueError:
             psamp = np.linspace(self.xgrid[0], self.xgrid[-1], 1000)
@@ -268,8 +264,8 @@ class _Sim():
             B = self.get_at_time(time, 'B')
             E = self.get_at_time(time, 'e^b')
         elif time == None and iteration != None:    
-           B = self.get(iteration, 'B')
-           E = self.get(iteration, 'e^b')
+            B = self.get(iteration, 'B')
+            E = self.get(iteration, 'e^b')
         elif iteration == None and time == None:
             raise ValueError("Both iteration and time are missing. Please provide either iteration or time.")
         else:
