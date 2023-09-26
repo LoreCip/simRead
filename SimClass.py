@@ -8,12 +8,12 @@ import errno
 import h5py
 
 import numpy as np
-import scipy.signal as sg
 import scipy.optimize as op
 
 import matplotlib.pyplot as plt
 
 from . import MakeVideo
+from . import math_functions as mf
 
 class _Sims():
 
@@ -185,22 +185,7 @@ class _Sim():
                 closest_idx = str(min(self.iterations, key=lambda x: abs(int(x) - int(max_iter))))
                 idx = self.iterations.index(str(int(closest_idx))) + 20
 
-        # Check distance from wanted time
-        dt = np.abs(time - self.get(idx, 't')) 
-
-        # Going backwards
-        for i in range(idx-1, 0, -1):
-            # Find new time
-            t = self.get(i, 't')
-            # Check its disntace from wanted time
-            dt_tmp = np.abs(time - t)
-            # If it is getting closer save it
-            if dt_tmp < dt:
-                dt = dt_tmp
-            # If it is going further stop the cycle
-            elif dt_tmp > dt:
-                i = i + 1
-                break
+        mf.find_i(idx, time, self)
 
         if not item in ['theta', 'expansion']:
             return self.__getitem__(self.iterations[i])[item]
@@ -208,52 +193,41 @@ class _Sim():
             return self.compute_expansion(iteration = i )
 
     def xbounce(self):
-
-        def fxb(x, alpha, rs):
-            return x**3 + alpha * x - rs
         
         try:
-            return op.brentq(fxb, 
+            return op.brentq(mf.fxb, 
                         1e-6, 3*(self.hor_loc)**(1/3), 
                         args = (self.r0**2 / self.a0**2, self.hor_loc))
         except ValueError:
             psamp = np.linspace(self.xgrid[0], self.xgrid[-1], 1000)
-            sampl = fxb(psamp, self.r0**2 / self.a0**2, self.hor_loc)
+            sampl = mf.fxb(psamp, self.r0**2 / self.a0**2, self.hor_loc)
             for i in range(1000):
                 if sampl[i] * samp[i+1] <= 0:
                     break
-            return op.brentq(fxb, 
+            return op.brentq(mf.fxb, 
                         self.xgrid[i], self.xgrid[i+1], 
                         args = (self.r0**2 / self.a0**2, self.hor_loc))
 
     def find_timeout(self):
-        
-        lx = len(self.xgrid)
 
-        for iter in range(self.niter-1, 0, -1):
-            t = self.get(iter, 't')
-            if t < 5:
-                continue
+        BH_present = False
+        never = True
+        for it in range(self.niter):
 
-            rho = self.get(iter, 'rho')
+            horizons = mf.find_zeros(self.xgrid, self.compute_expansion(iteration=it))
+            if not BH_present and len(horizons) != 0:
+                never = False
+                BH_present = True
+                t_formation = self.get(it, 't')
+            elif BH_present and len(horizons) == 0:
+                BH_present = False
+                t_exit = self.get(it, 't')
+                break
 
-            cond1 = self.xgrid >= self.xb
-            skipped = len(cond1) - sum(cond1)
-            cond2 = self.xgrid <= self.hor_loc*2
-            cond = cond1 & cond2
-
-            rho = rho[cond]
-            locmaxrho = self.find_peak(rho)
-            locmaxrho += skipped
-
-            if self.xgrid[locmaxrho] <= self.hor_loc:
-                return t
-
-        return np.NaN
-
-    def find_peak(self, rho, height = [1e-2]):
-        idx_MAX = sg.find_peaks(rho, height=height, distance=2)[0][::-1]
-        return idx_MAX[0]
+        if not never:
+            return t_exit - t_formation
+        else:
+            return np.NaN
 
     def compute_expansion(self, iteration=None, time=None):
         """
@@ -273,10 +247,7 @@ class _Sim():
             B = self.get(iteration, 'B')
             E = self.get(iteration, 'e^b')
 
-        theta = 1 - self.xgrid**2 * np.sin(2 * B / self.xgrid**2)**2 / ( 4 * (1 + E) )
-        im = np.argmin(theta)
-        theta[im] = theta[im + 1] 
-        return theta
+        return mf.expan(self.xgrid, B, E)
 
     def make_video(self, batches=0, video_path=None, fps=30, verbose='quiet'):
 
