@@ -29,8 +29,6 @@ def determine_y_axis_range(data):
 
 def plotting(inputs):
 
-    i, X, B, eps, rho, exp, t, m, path = inputs 
-
     DarkGray = '#233142'
     DarkBlue = '#455D7A'
     ClearRed = '#F95959'
@@ -39,7 +37,12 @@ def plotting(inputs):
     i, X, B, eps, rho, exp, t, m, path = inputs 
 
     matplotlib.rc('axes', edgecolor=DarkGray)
-    fig, axes = plt.subplots(ncols=2, nrows=1, sharex = 'col', figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 7.5))
+    axs = { 
+        0: fig.add_axes([0.1, 0.06*3+0.76/3*2, 0.8, 0.76/3], xticklabels=[]),
+        1: fig.add_axes([0.1, 0.06*2+0.76/3, 0.8, 0.76/3], xticklabels=[]),
+        2: fig.add_axes([0.1, 0.06, 0.8, 0.76/3]),
+    }
 
     xlim = (0., 20)
     mask1 = (X > xlim[0]+0.1) 
@@ -47,31 +50,34 @@ def plotting(inputs):
     skipped = len(mask1) - sum(mask1)
     mask = mask1 & mask2
 
-    ## PLOT 1
+    ## PLOT 3
     # Epsilon
-    axes[0].plot(X, eps, color = DarkBlue, zorder = 10)
-    axes[0].set_xlim(xlim)
-    axes[0].set_ylabel(r"$\epsilon$", rotation=0, color=DarkBlue)
-    axes[0].set_ylim(determine_y_axis_range(eps[mask]))
-    # B
-    ax2 = axes[0].twinx() 
-    ax2.set_ylabel('B', color = ClearRed, rotation=0)  
-    ax2.get_yaxis().set_label_coords(1.13,0.5)
-    ax2.plot(X, B, color = ClearRed)
-    ax2.tick_params(axis='y')     
-    ax2.set_ylim(determine_y_axis_range(B[mask]))
-
+    axs[2].plot(X, eps, color = DarkBlue, zorder = 10)
+    axs[2].set_xlim(xlim)
+    axs[2].set_ylim(determine_y_axis_range(eps[mask]))
     ## PLOT 2
+    # B
+    axs[1].plot(X, B, color = DarkBlue)
+    axs[1].set_ylim(determine_y_axis_range(B[mask]))
+    axs[1].set_xlim(xlim)
+
+    ## PLOT 1
     # Rho
-    axes[1].plot(X, rho, color = DarkBlue, zorder = 10)
-    axes[1].set_xlim(xlim)
-    axes[1].set_ylabel(r"$\rho$", rotation=0, color=DarkBlue)
-    axes[1].set_ylim(determine_y_axis_range(rho[mask]))
-   
+    axs[0].plot(X, rho, color = DarkBlue, zorder = 10)
+    axs[0].set_xlim(xlim)
+    axs[0].set_ylim(determine_y_axis_range(rho[mask]))
+
+    axs[0].set_ylabel(r"$\rho$", rotation=0, color=DarkBlue) 
+    axs[0].get_yaxis().set_label_coords(-0.1,0.5)   
+    axs[1].set_ylabel('B', rotation=0, color=DarkBlue)  
+    axs[1].get_yaxis().set_label_coords(-0.1,0.5)
+    axs[2].set_ylabel(r"$\epsilon$", color=DarkBlue)
+    axs[2].get_yaxis().set_label_coords(-0.1,0.5)
+
     # Expansion
-    ax2 = axes[1].twinx()
-    ax2.set_ylabel(r'$\theta_+$', color = ClearRed, rotation=0)  
-    ax2.get_yaxis().set_label_coords(1.12,0.5)
+    ax2 = axs[0].twinx()
+    ax2.set_ylabel(r'$\Theta$', color = ClearRed, rotation=0)  
+    ax2.get_yaxis().set_label_coords(1.1,0.5)
     ax2.plot(X, exp, color = ClearRed, zorder = 0)
     ax2.tick_params(axis='y')     
     ax2.set_ylim(determine_y_axis_range(exp[mask]))
@@ -80,20 +86,17 @@ def plotting(inputs):
     if len(idxs) != 0: 
         plt.scatter(idxs[:,0], idxs[:, 1], color = DarkGray, marker = '.')
 
-    axes[1].set_zorder(ax2.get_zorder()+1)
-    axes[1].set_frame_on(False)
+    axs[1].set_zorder(ax2.get_zorder()+1)
 
     textstr = "Time: " + str(np.round(t , 3))
     props = dict(boxstyle='round', facecolor=FullYellow, alpha=0.5)
-    axes[1].text(0.8, 0.95, textstr, transform=axes[1].transAxes, fontsize=14, verticalalignment='top', horizontalalignment='center', bbox=props)
+    axs[0].text(0.8, 0.95, textstr, transform=axs[0].transAxes, fontsize=14, verticalalignment='top', horizontalalignment='center', bbox=props)
 
-    for ii in range(2):
-        axes[ii].set_xlabel('R')
+    axs[2].set_xlabel("r")
     
-    plt.tight_layout()
-
     plt.savefig(os.path.join(path, f'frame{i:07d}.png'))
     plt.close()
+
 
 def ProduceInputs(sim, last_line, pline, path):
 
