@@ -4,6 +4,9 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+
+from .math_functions import find_zeros
 
 from tqdm import tqdm
 from p_tqdm import p_map
@@ -14,45 +17,83 @@ def determine_y_axis_range(data):
 
     if min_value > 0:
         y_min = 0
-        y_max = max_value * 1.3  # Add some padding above the maximum value
+        y_max = max_value * 1.2  # Add some padding above the maximum value
     elif max_value < 0:
-        y_min = min_value * 1.3  # Add some padding below the minimum value
+        y_min = min_value * 1.2  # Add some padding below the minimum value
         y_max = 0
     else:
-        y_min = min_value * 1.3  # Add some padding below the minimum value
-        y_max = max_value * 1.3  # Add some padding above the maximum value
+        y_min = min_value * 1.2  # Add some padding below the minimum value
+        y_max = max_value * 1.2  # Add some padding above the maximum value
 
     return [y_min, y_max]
 
 def plotting(inputs):
 
-        i, X, B, eps, rho, t, m, path = inputs 
+    i, X, B, eps, rho, exp, t, m, path = inputs 
 
-        fig = plt.figure(figsize=(13, 10))
-        fig.suptitle(f'Time: {np.round(t, 4)}', fontsize=14)
-        ax1 = fig.add_subplot(3,1,1, adjustable='box')
-        ax2 = fig.add_subplot(3,1,2)
-        ax3 = fig.add_subplot(3,1,3)
-        ax1.plot(X, rho)
-        ax2.plot(X, B)
-        ax3.plot(X, eps)
+    DarkGray = '#233142'
+    DarkBlue = '#455D7A'
+    ClearRed = '#F95959'
+    FullYellow = '#FACF5A'
 
-        xlim=[0, 2*m*2.5]
+    i, X, B, eps, rho, exp, t, m, path = inputs 
 
-        ax1.set(xlim=xlim, ylim=determine_y_axis_range(rho[100:-100]))
-        ax2.set(xlim=xlim, ylim=determine_y_axis_range(B[100:-100]))
-        ax3.set(xlim=xlim, ylim=determine_y_axis_range(eps[100:-100]))
+    matplotlib.rc('axes', edgecolor=DarkGray)
+    fig, axes = plt.subplots(ncols=2, nrows=1, sharex = 'col', figsize=(10, 6))
 
-        ax2.set_ylabel('B')
-        ax3.set_ylabel(r'$\epsilon^b$')
-        ax1.set_ylabel(r'$\rho$')
+    xlim = (0., 20)
+    mask1 = (X > xlim[0]+0.1) 
+    mask2 = (X < xlim[1])
+    skipped = len(mask1) - sum(mask1)
+    mask = mask1 & mask2
 
-        ax3.set_xlabel('x')
+    ## PLOT 1
+    # Epsilon
+    axes[0].plot(X, eps, color = DarkBlue, zorder = 10)
+    axes[0].set_xlim(xlim)
+    axes[0].set_ylabel(r"$\epsilon$", rotation=0, color=DarkBlue)
+    axes[0].set_ylim(determine_y_axis_range(eps[mask]))
+    # B
+    ax2 = axes[0].twinx() 
+    ax2.set_ylabel('B', color = ClearRed, rotation=0)  
+    ax2.get_yaxis().set_label_coords(1.13,0.5)
+    ax2.plot(X, B, color = ClearRed)
+    ax2.tick_params(axis='y')     
+    ax2.set_ylim(determine_y_axis_range(B[mask]))
 
-        plt.tight_layout()
+    ## PLOT 2
+    # Rho
+    axes[1].plot(X, rho, color = DarkBlue, zorder = 10)
+    axes[1].set_xlim(xlim)
+    axes[1].set_ylabel(r"$\rho$", rotation=0, color=DarkBlue)
+    axes[1].set_ylim(determine_y_axis_range(rho[mask]))
+   
+    # Expansion
+    ax2 = axes[1].twinx()
+    ax2.set_ylabel(r'$\theta_+$', color = ClearRed, rotation=0)  
+    ax2.get_yaxis().set_label_coords(1.12,0.5)
+    ax2.plot(X, exp, color = ClearRed, zorder = 0)
+    ax2.tick_params(axis='y')     
+    ax2.set_ylim(determine_y_axis_range(exp[mask]))
 
-        plt.savefig(os.path.join(path, f'frame{i:07d}.png'))
-        plt.close()
+    idxs = find_zeros(X, exp)
+    if len(idxs) != 0: 
+        plt.scatter(idxs[:,0], idxs[:, 1], color = DarkGray, marker = '.')
+
+    axes[1].set_zorder(ax2.get_zorder()+1)
+    axes[1].set_frame_on(False)
+
+    textstr = "Time: " + str(np.round(t , 3))
+    props = dict(boxstyle='round', facecolor=FullYellow, alpha=0.5)
+    axes[1].text(0.8, 0.95, textstr, transform=axes[1].transAxes, fontsize=14, verticalalignment='top', horizontalalignment='center', bbox=props)
+
+    for ii in range(2):
+        axes[ii].set_xlabel('R')
+    
+    plt.tight_layout()
+
+    plt.savefig(os.path.join(path, f'frame{i:07d}.png'))
+    plt.close()
 
 def ProduceInputs(sim, last_line, pline, path):
 
@@ -65,9 +106,10 @@ def ProduceInputs(sim, last_line, pline, path):
     ebs = sim.get(it, 'e^b')
     rhos = sim.get(it, 'rho')
     ts = sim.get(it, 't')
+    exp = sim.get(it, 'expansion')
     m = sim.mass
 
-    return [(last_line + i, X, Bs[i], ebs[i], rhos[i], ts[i], m, str(path)) for i in range(0, len(it))]
+    return [(last_line + i, X, Bs[i], ebs[i], rhos[i], exp[i], ts[i], m, str(path)) for i in range(0, len(it))]
 
 def GenerateVideo(sim, ppath, n_partitions = 1, fps=30, verbose='quiet'):
 
